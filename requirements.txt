@@ -1,0 +1,10 @@
+langchain
+langchain-core
+langchain-community
+langchain-text-splitters
+sentence-transformers
+chromadb
+langchain_groq
+python-dotenv
+numpy
+scikit-learn   
