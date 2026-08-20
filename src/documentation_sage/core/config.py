@@ -17,7 +17,7 @@ class EmbeddingConfig(BaseModel):
     Configuration for embedding generation.
     """
 
-    model_name: str = "all-MiniLM-L6-v2"
+    model_name: str = "BAAI/bge-small-en-v1.5"
 
     batch_size: int = 32
 
