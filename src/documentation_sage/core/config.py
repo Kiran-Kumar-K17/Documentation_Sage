@@ -37,14 +37,8 @@ class AppConfig(BaseModel):
     Main application configuration.
     """
 
-    chunking: ChunkingConfig = Field(
-        default_factory=ChunkingConfig
-    )
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
 
-    embedding: EmbeddingConfig = Field(
-        default_factory=EmbeddingConfig
-    )
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
 
-    vector_store: VectorStoreConfig = Field(
-        default_factory=VectorStoreConfig
-    )
+    vector_store: VectorStoreConfig = Field(default_factory=VectorStoreConfig)
