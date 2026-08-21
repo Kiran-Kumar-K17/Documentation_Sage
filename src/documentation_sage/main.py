@@ -18,6 +18,7 @@ from documentation_sage.rerankers.cross_encoder import (
 )
 from documentation_sage.generation.ollama_generator import OllamaGenerator
 from documentation_sage.pipelines.rag import RAGPipeline
+from documentation_sage.retrievers.index import BM25IndexManager
 
 
 def create_rag_pipeline() -> RAGPipeline:
@@ -27,23 +28,39 @@ def create_rag_pipeline() -> RAGPipeline:
 
     config = AppConfig()
 
-    print("Loading documents...")
+    index_manager = BM25IndexManager()
 
-    loader = TextDocumentLoader()
+    if index_manager.exists():
 
-    documents = loader.load_directory(Path("data/python"))
+        print("Loading saved BM25 chunks...")
 
-    print(f"Loaded documents: {len(documents)}")
+        chunks = index_manager.load()
 
-    print("Creating chunks...")
+        print(f"Loaded chunks: {len(chunks)}")
 
-    chunker = RecursiveChunker(config.chunking)
+    else:
 
-    chunks = chunker.split(documents)
+        print("Loading documents...")
 
-    print(f"Created chunks: {len(chunks)}")
+        loader = TextDocumentLoader()
 
-    print("Initializing embedding model...")
+        documents = loader.load_directory(Path("data/python"))
+
+        print(f"Loaded documents: {len(documents)}")
+
+        print("Creating chunks...")
+
+        chunker = RecursiveChunker(config.chunking)
+
+        chunks = chunker.split(documents)
+
+        print(f"Created chunks: {len(chunks)}")
+
+        print("Saving BM25 chunks...")
+
+        index_manager.save(chunks)
+
+        print("Initializing embedding model...")
 
     embedding_model = SentenceTransformerEmbedder(config.embedding)
 
