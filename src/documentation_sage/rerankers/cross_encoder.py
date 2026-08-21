@@ -15,6 +15,7 @@ class CrossEncoderReranker:
         query: str,
         chunks: list[RetrievedChunk],
         top_k: int = 5,
+        score_threshold: float = 0.0,
     ) -> list[RetrievedChunk]:
 
         if not chunks:
@@ -24,23 +25,17 @@ class CrossEncoderReranker:
 
         scores = self.model.predict(pairs)
 
-        scored_chunks = list(zip(chunks, scores))
+        for chunk, score in zip(chunks, scores):
+            chunk.score = float(score)
 
-        scored_chunks.sort(
-            key=lambda item: float(item[1]),
+        ranked_chunks = sorted(
+            chunks,
+            key=lambda chunk: chunk.score,
             reverse=True,
         )
 
-        reranked_chunks: list[RetrievedChunk] = []
+        filtered_chunks = [
+            chunk for chunk in ranked_chunks if chunk.score >= score_threshold
+        ]
 
-        for rank, (chunk, score) in enumerate(
-            scored_chunks[:top_k],
-            start=1,
-        ):
-
-            chunk.score = float(score)
-            chunk.rank = rank
-
-            reranked_chunks.append(chunk)
-
-        return reranked_chunks
+        return filtered_chunks[:top_k]

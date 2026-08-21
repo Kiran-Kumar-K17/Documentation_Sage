@@ -16,11 +16,7 @@ from documentation_sage.retrievers.hybrid import HybridRetriever
 from documentation_sage.rerankers.cross_encoder import (
     CrossEncoderReranker,
 )
-
-from documentation_sage.generation.groq_generator import (
-    GroqGenerator,
-)
-
+from documentation_sage.generation.ollama_generator import OllamaGenerator
 from documentation_sage.pipelines.rag import RAGPipeline
 
 
@@ -79,10 +75,9 @@ def create_rag_pipeline() -> RAGPipeline:
 
     print("Initializing generator...")
 
-    generator = GroqGenerator(
-        api_key=config.generation.api_key,
-        model=config.generation.model_name,
-        temperature=config.generation.temperature,
+    generator = OllamaGenerator(
+        model="phi4-mini:3.8b",
+        temperature=0.2,
     )
 
     print("Building RAG pipeline...")
@@ -123,7 +118,7 @@ def main():
         answer = rag.query(
             query=query,
             retrieval_top_k=10,
-            rerank_top_k=5,
+            rerank_top_k=3,
         )
 
         print("=" * 60)

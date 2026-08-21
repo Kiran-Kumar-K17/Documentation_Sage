@@ -1,29 +1,29 @@
-from documentation_sage.schemas.retrieval import RetrievedChunk
-
-
 def build_context(
-    chunks: list[RetrievedChunk],
-    max_chunk_chars: int = 1500,
-    max_context_chars: int = 6000,
-) -> str:
-
+    chunks,
+    max_context_chars: int = 8000,
+    max_chunk_chars: int = 2000,
+):
     context_parts = []
+    used_chunks = []
     current_length = 0
 
     for chunk in chunks:
-        source = chunk.metadata.get("source_file", "unknown")
-
         content = chunk.content[:max_chunk_chars]
 
-        chunk_text = f"""[Source: {source}]
-
-{content}
-"""
-
-        if current_length + len(chunk_text) > max_context_chars:
+        if current_length + len(content) > max_context_chars:
             break
 
-        context_parts.append(chunk_text)
-        current_length += len(chunk_text)
+        source = chunk.metadata.get(
+            "source_file",
+            "Unknown source",
+        )
 
-    return "\n\n".join(context_parts)
+        context_parts.append(f"[Source: {source}]\n\n{content}")
+
+        used_chunks.append(chunk)
+
+        current_length += len(content)
+
+    context = "\n\n".join(context_parts)
+
+    return context, used_chunks
