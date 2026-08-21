@@ -1,44 +1,44 @@
-from pathlib import Path
+import os
+from pydantic import BaseModel
+from dotenv import load_dotenv
 
-from pydantic import BaseModel, Field
+load_dotenv()
 
 
 class ChunkingConfig(BaseModel):
-    """
-    Configuration for document chunking.
-    """
-
     chunk_size: int = 1000
     chunk_overlap: int = 200
 
 
 class EmbeddingConfig(BaseModel):
-    """
-    Configuration for embedding generation.
-    """
-
     model_name: str = "BAAI/bge-small-en-v1.5"
-
     batch_size: int = 32
 
 
 class VectorStoreConfig(BaseModel):
-    """
-    Configuration for the vector database.
-    """
-
+    persist_directory: str = "data/vector_store"
     collection_name: str = "Text_Documents"
 
-    persist_directory: Path = Path("data/vector_store")
+
+class GenerationConfig(BaseModel):
+    model_name: str = os.getenv("LLM_MODEL", "")
+    api_key: str = os.getenv("GROQ_API_KEY", "")
+    temperature: float = 0.2
+    max_tokens: int = 1000
+
+
+# ADD THIS
+class RerankerConfig(BaseModel):
+    model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 class AppConfig(BaseModel):
-    """
-    Main application configuration.
-    """
+    chunking: ChunkingConfig = ChunkingConfig()
 
-    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    embedding: EmbeddingConfig = EmbeddingConfig()
 
-    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    vector_store: VectorStoreConfig = VectorStoreConfig()
 
-    vector_store: VectorStoreConfig = Field(default_factory=VectorStoreConfig)
+    generation: GenerationConfig = GenerationConfig()
+
+    reranker: RerankerConfig = RerankerConfig()
