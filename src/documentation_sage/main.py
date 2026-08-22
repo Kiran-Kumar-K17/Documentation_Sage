@@ -1,24 +1,26 @@
 from pathlib import Path
 
 from documentation_sage.core.config import AppConfig
-
 from documentation_sage.ingestion.loader import TextDocumentLoader
 from documentation_sage.chunking.recursive import RecursiveChunker
 
 from documentation_sage.embeddings.sentence_transformer import (
     SentenceTransformerEmbedder,
 )
+
 from documentation_sage.vectorstores.chroma import ChromaVectorStore
+
 from documentation_sage.retrievers.vector import VectorRetriever
 from documentation_sage.retrievers.bm25 import BM25Retriever
 from documentation_sage.retrievers.hybrid import HybridRetriever
+from documentation_sage.retrievers.index import BM25IndexManager
 
 from documentation_sage.rerankers.cross_encoder import (
     CrossEncoderReranker,
 )
+
 from documentation_sage.generation.ollama_generator import OllamaGenerator
 from documentation_sage.pipelines.rag import RAGPipeline
-from documentation_sage.retrievers.index import BM25IndexManager
 
 
 def create_rag_pipeline() -> RAGPipeline:
@@ -28,18 +30,17 @@ def create_rag_pipeline() -> RAGPipeline:
 
     config = AppConfig()
 
+    # --------------------------------------------------
+    # Load or create BM25 index
+    # --------------------------------------------------
+
     index_manager = BM25IndexManager()
 
     if index_manager.exists():
 
-        print("Loading saved BM25 chunks...")
-
-        chunks = index_manager.load()
-
-        print(f"Loaded chunks: {len(chunks)}")
+        bm25_retriever = index_manager.create_or_load()
 
     else:
-
         print("Loading documents...")
 
         loader = TextDocumentLoader()
@@ -56,19 +57,47 @@ def create_rag_pipeline() -> RAGPipeline:
 
         print(f"Created chunks: {len(chunks)}")
 
-        print("Saving BM25 chunks...")
+        print("Saving BM25 index...")
 
-        index_manager.save(chunks)
+        bm25_retriever.save(str(index_manager.index_path))
 
-        print("Initializing embedding model...")
+        print("Initializing BM25 retriever...")
+
+        bm25_retriever = BM25Retriever(
+            chunks=chunks,
+        )
+
+        print("Saving BM25 index...")
+
+        bm25_retriever.save(str(index_manager.index_path))
+
+        print("Initializing BM25 retriever...")
+
+        bm25_retriever = BM25Retriever(
+            chunks=chunks,
+        )
+
+    # --------------------------------------------------
+    # Embedding model
+    # --------------------------------------------------
+
+    print("Initializing embedding model...")
 
     embedding_model = SentenceTransformerEmbedder(config.embedding)
+
+    # --------------------------------------------------
+    # Vector store
+    # --------------------------------------------------
 
     print("Connecting to vector store...")
 
     vector_store = ChromaVectorStore(
         config.vector_store,
     )
+
+    # --------------------------------------------------
+    # Vector retriever
+    # --------------------------------------------------
 
     print("Initializing retrievers...")
 
@@ -77,18 +106,26 @@ def create_rag_pipeline() -> RAGPipeline:
         embedder=embedding_model,
     )
 
-    bm25_retriever = BM25Retriever(
-        chunks=chunks,
-    )
+    # --------------------------------------------------
+    # Hybrid retriever
+    # --------------------------------------------------
 
     hybrid_retriever = HybridRetriever(
         vector_retriever=vector_retriever,
         bm25_retriever=bm25_retriever,
     )
 
+    # --------------------------------------------------
+    # Reranker
+    # --------------------------------------------------
+
     print("Initializing reranker...")
 
     reranker = CrossEncoderReranker(config.reranker.model_name)
+
+    # --------------------------------------------------
+    # Generator
+    # --------------------------------------------------
 
     print("Initializing generator...")
 
@@ -96,6 +133,10 @@ def create_rag_pipeline() -> RAGPipeline:
         model="phi4-mini:3.8b",
         temperature=0.2,
     )
+
+    # --------------------------------------------------
+    # RAG Pipeline
+    # --------------------------------------------------
 
     print("Building RAG pipeline...")
 
@@ -121,9 +162,7 @@ def main():
 
         query = input("\nQuestion: ").strip()
 
-        if query.lower() in {
-            "q",
-        }:
+        if query.lower() == "q":
             print("\nGoodbye!")
             break
 
@@ -138,7 +177,7 @@ def main():
             rerank_top_k=3,
         )
 
-        print("=" * 60)
+        print("\n" + "=" * 60)
         print("ANSWER")
         print("=" * 60)
 
