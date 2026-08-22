@@ -27,7 +27,12 @@ class RecursiveChunker:
 
             for chunk_index, split_document in enumerate(split_documents):
 
-                content = split_document.page_content
+                raw_content = split_document.page_content
+                source_file = split_document.metadata.get("source_file", "")
+                if source_file:
+                    content = f"Document: {source_file}\n\n{raw_content}"
+                else:
+                    content = raw_content
 
                 chunk_id = generate_chunk_id(
                     document_id=document.document_id,

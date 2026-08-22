@@ -4,7 +4,6 @@ from documentation_sage.generation.base import BaseGenerator
 
 
 class OllamaGenerator(BaseGenerator):
-
     def __init__(
         self,
         model: str = "phi4-mini:3.8b",
@@ -25,6 +24,7 @@ class OllamaGenerator(BaseGenerator):
 You are Documentation Sage, a documentation-based AI assistant.
 
 Rules:
+
 1. Answer ONLY using the provided context.
 2. Do not use outside knowledge.
 3. Do not add information that is not supported by the context.
@@ -47,30 +47,50 @@ Question:
 Answer:
 """
 
-        response = requests.post(
-            f"{self.base_url}/api/chat",
-            json={
-                "model": self.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": system_prompt,
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/chat",
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": system_prompt,
+                        },
+                        {
+                            "role": "user",
+                            "content": user_prompt,
+                        },
+                    ],
+                    "stream": False,
+                    "think": False,
+                    "options": {
+                        "temperature": self.temperature,
                     },
-                    {
-                        "role": "user",
-                        "content": user_prompt,
-                    },
-                ],
-                "stream": False,
-                "think": False,
-                "options": {
-                    "temperature": self.temperature,
                 },
-            },
-        )
+                timeout=120,
+            )
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        data = response.json()
+            data = response.json()
 
-        return data["message"]["content"]
+            return data["message"]["content"]
+
+        except requests.exceptions.ConnectionError:
+            return (
+                "Error: Could not connect to Ollama. "
+                "Make sure the Ollama server is running."
+            )
+
+        except requests.exceptions.Timeout:
+            return "Error: The model took too long to generate a response."
+
+        except requests.exceptions.HTTPError as error:
+            return f"Error: Ollama returned an HTTP error: {error}"
+
+        except KeyError:
+            return "Error: Unexpected response format received from Ollama."
+
+        except Exception as error:
+            return f"Error: Failed to generate an answer: {error}"

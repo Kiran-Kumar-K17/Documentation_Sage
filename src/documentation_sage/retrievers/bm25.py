@@ -1,19 +1,27 @@
 import pickle
 import re
 from pathlib import Path
-
+from nltk.stem.porter import PorterStemmer
 from rank_bm25 import BM25Okapi
-
 from documentation_sage.retrievers.base import Retriever
 from documentation_sage.schemas.documents import Chunk
 from documentation_sage.schemas.retrieval import RetrievedChunk
 
+_stemmer = None
+
+
+def get_stemmer():
+    global _stemmer
+    if _stemmer is None:
+        _stemmer = PorterStemmer()
+    return _stemmer
+
 
 def tokenize(text: str) -> list[str]:
-    return re.findall(
-        r"\b\w+\b",
-        text.lower(),
-    )
+    """Tokenize text with Porter stemming."""
+    stemmer = get_stemmer()
+    tokens = re.findall(r"\b\w+\b", text.lower())
+    return [stemmer.stem(token) for token in tokens]
 
 
 class BM25Retriever(Retriever):

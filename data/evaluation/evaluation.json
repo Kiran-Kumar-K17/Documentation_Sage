@@ -1,0 +1,42 @@
+[
+  {
+    "question": "What is None in Python?",
+    "expected_sources": ["none.txt", "stdtypes.txt"]
+  },
+  {
+    "question": "How do I handle exceptions in Python?",
+    "expected_sources": ["errors.txt", "exceptions.txt"]
+  },
+  {
+    "question": "How do I create a class in Python?",
+    "expected_sources": ["classes.txt"]
+  },
+  {
+    "question": "What is a Python dictionary?",
+    "expected_sources": ["stdtypes.txt", "dict.txt", "datastructures.txt"]
+  },
+  {
+    "question": "How do I read a file in Python?",
+    "expected_sources": ["io.txt", "pathlib.txt", "inputoutput.txt"]
+  },
+  {
+    "question": "How do I use the json module in Python?",
+    "expected_sources": ["json.txt"]
+  },
+  {
+    "question": "What is a Python list?",
+    "expected_sources": ["stdtypes.txt", "list.txt"]
+  },
+  {
+    "question": "How do I work with regular expressions in Python?",
+    "expected_sources": ["re.txt", "regex.txt"]
+  },
+  {
+    "question": "How do I use asyncio in Python?",
+    "expected_sources": ["asyncio.txt"]
+  },
+  {
+    "question": "How do I create a virtual environment?",
+    "expected_sources": ["venv.txt"]
+  }
+]

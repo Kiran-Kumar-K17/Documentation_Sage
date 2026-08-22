@@ -1,18 +1,16 @@
-from tracemalloc import start
-from documentation_sage.schemas.documents import Chunk
 import chromadb
+
+from documentation_sage.schemas.documents import Chunk
 from documentation_sage.core.config import VectorStoreConfig
 from documentation_sage.vectorstores.base import VectorStore
 from documentation_sage.schemas.retrieval import RetrievedChunk
 
 
 class ChromaVectorStore(VectorStore):
-
     def __init__(
         self,
         config: VectorStoreConfig,
     ) -> None:
-
         self.config = config
 
         self.client = chromadb.PersistentClient(path=config.persist_directory)
@@ -20,6 +18,12 @@ class ChromaVectorStore(VectorStore):
         self.collection = self.client.get_or_create_collection(
             name=config.collection_name
         )
+
+    def exists(self) -> bool:
+        """
+        Check whether the vector store contains embeddings.
+        """
+        return self.collection.count() > 0
 
     def add(
         self,
@@ -34,7 +38,6 @@ class ChromaVectorStore(VectorStore):
         total_chunks = len(chunks)
 
         for start in range(0, total_chunks, batch_size):
-
             end = min(start + batch_size, total_chunks)
 
             batch_chunks = chunks[start:end]
@@ -66,7 +69,8 @@ class ChromaVectorStore(VectorStore):
         self,
         query_embedding,
         top_k,
-    ):
+    ) -> list[RetrievedChunk]:
+
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
@@ -76,6 +80,7 @@ class ChromaVectorStore(VectorStore):
                 "distances",
             ],
         )
+
         retrieved_chunks: list[RetrievedChunk] = []
 
         ids = results["ids"][0]
@@ -83,7 +88,12 @@ class ChromaVectorStore(VectorStore):
         metadatas = results["metadatas"][0]
         distances = results["distances"][0]
 
-        for rank, (chunk_id, document, metadata, distance) in enumerate(
+        for rank, (
+            chunk_id,
+            document,
+            metadata,
+            distance,
+        ) in enumerate(
             zip(
                 ids,
                 documents,
@@ -92,6 +102,7 @@ class ChromaVectorStore(VectorStore):
             ),
             start=1,
         ):
+
             retrieved_chunk = RetrievedChunk(
                 chunk_id=chunk_id,
                 document_id=metadata.get("document_id"),
