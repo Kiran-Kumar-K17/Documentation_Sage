@@ -28,7 +28,6 @@ class RAGEvaluator:
         """
         Load evaluation questions from JSON.
         """
-
         with path.open(
             "r",
             encoding="utf-8",
@@ -41,12 +40,15 @@ class RAGEvaluator:
         top_k: int = 10,
     ) -> dict:
         """
-        Evaluate retrieval performance.
+        Evaluate retrieval and reranking performance.
         """
 
         recall_scores = []
         reciprocal_ranks = []
+
         retrieval_times = []
+        rerank_times = []
+        total_times = []
 
         print("\nRunning RAG evaluation...\n")
 
@@ -55,42 +57,79 @@ class RAGEvaluator:
             start=1,
         ):
             question = item["question"]
-
             expected_sources = item["expected_sources"]
 
-            start_time = time.perf_counter()
+            # ----------------------------------------
+            # Retrieval timing
+            # ----------------------------------------
+
+            retrieval_start = time.perf_counter()
 
             if self.reranker:
                 candidate_k = max(top_k * 3, 30)
+
                 candidates = self.retriever.retrieve(
                     query=question,
                     top_k=candidate_k,
                 )
+            else:
+                candidates = self.retriever.retrieve(
+                    query=question,
+                    top_k=top_k,
+                )
+
+            retrieval_time = time.perf_counter() - retrieval_start
+
+            retrieval_times.append(retrieval_time)
+
+            # ----------------------------------------
+            # Reranking timing
+            # ----------------------------------------
+
+            rerank_time = 0.0
+
+            if self.reranker:
+
+                rerank_start = time.perf_counter()
+
                 results = self.reranker.rerank(
                     query=question,
                     chunks=candidates,
                     top_k=top_k,
                     score_threshold=-100.0,
                 )
+
+                rerank_time = time.perf_counter() - rerank_start
+
             else:
-                results = self.retriever.retrieve(
-                    query=question,
-                    top_k=top_k,
-                )
+                results = candidates
 
-            end_time = time.perf_counter()
+            rerank_times.append(rerank_time)
 
-            retrieval_time = end_time - start_time
+            # ----------------------------------------
+            # Total pipeline retrieval time
+            # ----------------------------------------
 
-            retrieval_times.append(retrieval_time)
+            total_time = retrieval_time + rerank_time
+
+            total_times.append(total_time)
+
+            # ----------------------------------------
+            # Extract retrieved sources
+            # ----------------------------------------
 
             retrieved_sources = []
 
             for result in results:
+
                 source = result.metadata.get("source_file")
 
                 if source and source not in retrieved_sources:
                     retrieved_sources.append(source)
+
+            # ----------------------------------------
+            # Metrics
+            # ----------------------------------------
 
             recall = recall_at_k(
                 retrieved_sources,
@@ -103,8 +142,11 @@ class RAGEvaluator:
             )
 
             recall_scores.append(recall)
-
             reciprocal_ranks.append(rr)
+
+            # ----------------------------------------
+            # Output
+            # ----------------------------------------
 
             print(f"[{index}/{len(questions)}] " f"{question}")
 
@@ -112,16 +154,28 @@ class RAGEvaluator:
 
             print(f"Reciprocal Rank: {rr:.3f}")
 
-            print(f"Time: {retrieval_time:.3f}s\n")
-            print(f"Expected Sources: {expected_sources}")
+            print(f"Retrieval Time: {retrieval_time:.3f}s")
 
-            print(f"Retrieved Sources: {retrieved_sources}")
+            if self.reranker:
+                print(f"Reranking Time: {rerank_time:.3f}s")
+
+            print(f"Total Time: {total_time:.3f}s\n")
+
+            print(f"Expected Sources: " f"{expected_sources}")
+
+            print(f"Retrieved Sources: " f"{retrieved_sources}")
+
+        # ----------------------------------------
+        # Final evaluation results
+        # ----------------------------------------
 
         results = {
             "total_questions": len(questions),
             f"recall_at_{top_k}": (calculate_average(recall_scores)),
             "mrr": calculate_average(reciprocal_ranks),
             "average_retrieval_time": (calculate_average(retrieval_times)),
+            "average_rerank_time": (calculate_average(rerank_times)),
+            "average_total_time": (calculate_average(total_times)),
         }
 
         return results
